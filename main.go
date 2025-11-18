@@ -3,7 +3,8 @@ package main
 import (
 	"booking-app/helper"
 	"fmt"
-	"strings"
+	"sync"
+	"time"
 )
 
 // package level variables
@@ -13,8 +14,19 @@ const conferenceTickets = 50
 
 var remainingTickets uint = 50
 
-// slices
-var bookings []string
+// slices, a list of map
+// var bookings = make([]map[string]string, 0)
+
+// slice list of userdata
+var bookings = make([]UserData, 0)
+
+type UserData struct {
+	firstName          string
+	lastname           string
+	email              string
+	numberOfTickets    uint
+	optedForNewsletter bool
+}
 
 //uint only positive numbers
 
@@ -23,6 +35,10 @@ var bookings []string
 
 // array intialize
 // var bookings [50]string
+
+// if we don't have the infinite loop then we will need to add wg to wait for the task to be completed to close the program
+var wg = sync.WaitGroup{}
+
 func main() {
 
 	greetusers()
@@ -44,12 +60,15 @@ func main() {
 
 			bookTicket(firstName, lastname, email, userTickets)
 
+			wg.Add(1)
+			go sendTicket(userTickets, firstName, lastname, email)
+
 			var firstNames = getFirstNames()
 
 			fmt.Printf("The first names of bookings are %v\n", firstNames)
 
 			if remainingTickets == 0 {
-				//end loop
+
 				fmt.Printf("our conference is booked\n")
 				break
 			}
@@ -65,6 +84,8 @@ func main() {
 			}
 
 		}
+
+		wg.Wait()
 
 	}
 
@@ -96,8 +117,7 @@ func greetusers() {
 func getFirstNames() []string {
 	firstNames := []string{}
 	for _, booking := range bookings {
-		var names = strings.Fields(booking)
-		firstNames = append(firstNames, names[0])
+		firstNames = append(firstNames, booking.firstName)
 	}
 	//if we want to directly print it
 	// fmt.Printf("the fist names of bookings are %v\n\n", firstNames)
@@ -129,10 +149,33 @@ func getUserInput() (string, string, string, uint) {
 
 func bookTicket(firstName string, lastname string, email string, userTickets uint) {
 	remainingTickets = remainingTickets - userTickets
-	//for array
-	// bookings[0] = firstName + " " + lastname
 
-	bookings = append(bookings, firstName+" "+lastname)
+	//create a map for user
+	// var userData = make(map[string]string)
+	// userData["firstName"] = firstName
+
+	// userData["lastname"] = lastname
+
+	// userData["email"] = email
+
+	// userData["numberOfTickets"] = strconv.FormatUint(uint64(userTickets), 10)
+
+	// //for array
+	// // bookings[0] = firstName + " " + lastname
+
+	// bookings = append(bookings, userData)
+
+	//create a userdata struct
+
+	var userdata = UserData{
+		firstName:          firstName,
+		lastname:           lastname,
+		email:              email,
+		numberOfTickets:    userTickets,
+		optedForNewsletter: false,
+	}
+
+	bookings = append(bookings, userdata)
 
 	// fmt.Printf("the whole slice is %v\n", bookings)
 	// fmt.Printf("the length of slice is %v\n", len(bookings))
@@ -140,5 +183,17 @@ func bookTicket(firstName string, lastname string, email string, userTickets uin
 	fmt.Printf("Thank you %v %v for booing %v tickts. you will recieve a confirmation email at %v\n", firstName, lastname, userTickets, email)
 
 	fmt.Printf("%v tickets remaining for %v\n", remainingTickets, conferenceName)
+
+}
+
+func sendTicket(userTickets uint, firstname string, lastname string, email string) {
+	//sleeping for 5 seconds
+	time.Sleep(5 * time.Second)
+	var ticket = fmt.Sprintf("%v tickets for %v %v", userTickets, firstname, lastname)
+	fmt.Println("############################")
+	fmt.Printf("Sending ticket:\n %v to email address %v\n", ticket, email)
+	fmt.Println("############################")
+
+	wg.Done()
 
 }
